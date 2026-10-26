@@ -597,6 +597,10 @@ export function FormattingBar(explicitProps: FormattingBarProps) {
             title={t('formattingBar.highlightColor')}
           />
         )}
+      </ToolbarGroup>
+
+      {/* Keep insertion actions separate from character formatting. */}
+      <ToolbarGroup label={t('toolbar.insert')}>
         <ToolbarButton
           onClick={() => handleFormat('insertLink')}
           disabled={disabled}

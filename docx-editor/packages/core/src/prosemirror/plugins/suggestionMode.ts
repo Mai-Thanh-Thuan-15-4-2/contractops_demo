@@ -323,6 +323,9 @@ export function createSuggestionModePlugin(initialActive = false, author = 'User
     appendTransaction(transactions, _oldState, newState) {
       const pluginState = suggestionModeKey.getState(newState);
       if (!pluginState?.active) return null;
+      // Remote Yjs updates already carry their author's revision marks. Never
+      // reinterpret another user's direct edit as a local suggestion.
+      if (transactions.some((tr) => tr.getMeta('y-sync$') != null)) return null;
 
       const userTr = transactions.find((tr) => tr.docChanged && !tr.getMeta(SUGGESTION_META));
       if (!userTr) return null;

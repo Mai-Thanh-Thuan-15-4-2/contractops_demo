@@ -1,3 +1,5 @@
+# Local contract demo sessions
+examples/vite/.contract-data/
 # Dependencies
 node_modules/
 

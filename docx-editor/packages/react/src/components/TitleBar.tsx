@@ -1172,7 +1172,19 @@ export function MenuBar() {
     { id: 'help', label: t('toolbar.help'), items: helpItems, show: true },
   ];
 
-  const visibleMenus = menus.filter((m) => m.show);
+  const visibleMenus = menus.filter((m) => m.show).map((menu) => {
+    if (!disabled) return menu;
+    // Read-only documents still expose menus; only mutating entries are disabled.
+    const items = menu.items.map((entry) => {
+      if ('type' in entry && entry.type === 'separator') return entry;
+      const item = entry as import('./ui/MenuDropdown').MenuItem;
+      const safe = menu.id === 'view' || menu.id === 'help' ||
+        menu.id === 'file' && ['save', 'download', 'file_download', 'print', 'history'].includes(String(item.icon)) ||
+        menu.id === 'edit' && item.icon === 'content_copy';
+      return safe ? entry : { ...entry, disabled: true };
+    });
+    return { ...menu, items };
+  });
 
   return (
     <MenuBarProvider onOpenChange={onMenuOpenChange}>
@@ -1193,7 +1205,7 @@ export function MenuBar() {
           <MenuDropdown
             id="menu-overflow"
             ariaLabel="Menus"
-            disabled={disabled}
+            disabled={false}
             label={
               <span
                 data-testid="menu-overflow"
@@ -1217,7 +1229,7 @@ export function MenuBar() {
               key={m.id}
               id={m.id}
               label={m.label}
-              disabled={disabled}
+              disabled={false}
               items={m.items}
             />
           ))

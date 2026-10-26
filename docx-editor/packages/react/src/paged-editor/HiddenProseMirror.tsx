@@ -430,7 +430,8 @@ const HiddenProseMirrorComponent = forwardRef<HiddenProseMirrorRef, HiddenProseM
     // Update editable state
     useEffect(() => {
       if (!viewRef.current) return;
-      // EditorView will call editable() on each check, so we don't need to update
+      // Replace the closure created at mount when the host changes document mode.
+      viewRef.current.setProps({ editable: () => !readOnly });
     }, [readOnly]);
 
     // ========================================================================

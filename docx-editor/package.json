@@ -41,6 +41,8 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
+    "@dicebear/core": "9.4.2",
+    "@dicebear/fun-emoji": "^9.4.2",
     "@happy-dom/global-registrator": "^20.8.3",
     "@hocuspocus/server": "^2.15.0",
     "@playwright/test": "^1.58.1",

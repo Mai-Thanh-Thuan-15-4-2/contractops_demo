@@ -87,7 +87,8 @@ import { recordRecentFile } from '../utils/recent-files';
 import { openExternal } from '../utils/openExternal';
 import { CommentMarginMarkers } from './CommentMarginMarkers';
 import { useCommentSidebarItems, type CommentCallbacks } from '../hooks/useCommentSidebarItems';
-import { useTrackedChanges } from '../hooks/useTrackedChanges';
+import { extractTrackedChanges, useTrackedChanges } from '../hooks/useTrackedChanges';
+import type { TrackedChangeEntry } from './sidebar/cardUtils';
 import type { EditorState as PMEditorState } from 'prosemirror-state';
 import { NodeSelection, Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
@@ -800,6 +801,11 @@ export interface DocxEditorProps {
    * `'documentModeChange'` emitter event. Both callbacks fire.
    */
   onDocumentModeChange?: (mode: EditorMode) => void;
+  /**
+   * Host owns review. Hides the in-document accept bar, suggestion banner,
+   * comment margin, and comment sidebar so those actions live outside the editor.
+   */
+  externalReview?: boolean;
   /** Callback when a comment is added via the UI */
   onCommentAdd?: (comment: Comment) => void;
   /** Callback when a comment is resolved via the UI */
@@ -1070,6 +1076,14 @@ export interface DocxEditorRef {
     replaceWith: string;
     author: string;
   }) => boolean;
+  /** Tracked changes currently in the document, in reading order. */
+  getTrackedChanges: () => TrackedChangeEntry[];
+  /** Accept one tracked change by its document range. */
+  acceptTrackedChange: (from: number, to: number) => void;
+  /** Reject one tracked change by its document range. */
+  rejectTrackedChange: (from: number, to: number) => void;
+  /** Select a tracked change and scroll it into view. */
+  focusTrackedChange: (from: number, to: number) => void;
   /** Locate every paragraph containing `query` (case-insensitive substring).
    * Returns a stable handle (paraId + the matched phrase) the agent can pass
    * back to `addComment` / `proposeChange`. */
@@ -1806,6 +1820,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     mode: modeProp,
     onModeChange,
     onDocumentModeChange,
+    externalReview = false,
     onDirtyChange,
     onCommentAdd,
     onCommentResolve,
@@ -7589,7 +7604,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
           // files-stay-on-disk model. Web keeps the IDB autosave.
           const onDesktop = !!(window as { __deskApp__?: { isDesktop?: boolean } }).__deskApp__
             ?.isDesktop;
-          if (!onDesktop) {
+          if (!onDesktop && !externalContent) {
             await writeAutosave({
               name: documentName?.trim() || 'Untitled',
               buffer,
@@ -8726,6 +8741,28 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
       // latest value via refs so the handle needn't be re-created on mode change.
       setDocumentMode: (mode) => setEditingModeRef.current(mode),
       getDocumentMode: () => editingModeRef.current,
+      getTrackedChanges: () => {
+        const view = pagedEditorRef.current?.getView();
+        return view ? extractTrackedChanges(view.state).entries : [];
+      },
+      acceptTrackedChange: (from, to) => {
+        const view = pagedEditorRef.current?.getView();
+        if (view) acceptChange(from, to)(view.state, view.dispatch);
+      },
+      rejectTrackedChange: (from, to) => {
+        const view = pagedEditorRef.current?.getView();
+        if (view) rejectChange(from, to)(view.state, view.dispatch);
+      },
+      focusTrackedChange: (from, to) => {
+        const view = pagedEditorRef.current?.getView();
+        if (!view || from >= to) return;
+        view.dispatch(
+          view.state.tr
+            .setSelection(TextSelection.create(view.state.doc, from, to))
+            .scrollIntoView()
+        );
+        view.focus();
+      },
 
       // ── Unified SDK contract (doc 38 §4) ────────────────────────────────
       // Canonical aliases delegate to the existing implementations so the old
@@ -9728,7 +9765,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                     </div>
                   )}
 
-                  {editingMode === 'suggesting' && (
+                  {editingMode === 'suggesting' && !externalReview && (
                     <SuggestingModeBanner onSwitchToEditing={() => setEditingMode('editing')} />
                   )}
 
@@ -9737,7 +9774,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                     the Tauri shell owns crash recovery via sidecar files and
                     shows its own restore UI. IndexedDB autosave is also
                     disabled on desktop (see onDesktop guard above). */}
-                  {!(window as { __deskApp__?: { isDesktop?: boolean } }).__deskApp__
+                  {!externalContent && !(window as { __deskApp__?: { isDesktop?: boolean } }).__deskApp__
                     ?.isDesktop && (
                     <AutosaveRestoreBanner
                       onRestore={(buf, name) => {
@@ -10084,7 +10121,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                                   way to act on them. The bar now shows for
                                   the union of user-typed suggestions and
                                   AI-staged ones. */}
-                                  {trackedChanges.length > 0 && (
+                                  {!externalReview && trackedChanges.length > 0 && (
                                     <div
                                       style={{
                                         position: 'absolute',
@@ -10153,7 +10190,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                                       </Tooltip>
                                     </div>
                                   )}
-                                  {(allSidebarItems.length > 0 || showCommentsSidebar) && (
+                                  {!externalReview && (allSidebarItems.length > 0 || showCommentsSidebar) && (
                                     <UnifiedSidebar
                                       items={allSidebarItems}
                                       open={showCommentsSidebar}
@@ -10166,7 +10203,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                                       activeItemId={expandedSidebarItem}
                                     />
                                   )}
-                                  <CommentMarginMarkers
+                                  {!externalReview && <CommentMarginMarkers
                                     comments={comments}
                                     anchorPositions={anchorPositions}
                                     zoom={state.zoom}
@@ -10176,7 +10213,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
                                     onMarkerClick={() => {
                                       setShowCommentsSidebar(true);
                                     }}
-                                  />
+                                  />}
                                   {/* Version history is mounted as a flex sibling
                                   of the scroll container (below this block),
                                   not here — keeping it outside the scrolling

@@ -1,0 +1,68 @@
+@import '../../../packages/react/src/styles/editor.css';
+/* Creator policy: collaborators propose; only the creator resolves proposals. */
+.suggestions-only [data-testid='tracked-changes-accept-all'],.suggestions-only [data-testid='tracked-changes-reject-all'],.suggestions-only [aria-label='Chấp nhận'],.suggestions-only [aria-label='Từ chối'],.suggestions-only [aria-label='Accept'],.suggestions-only [aria-label='Reject']{display:none!important}
+.contract-canvas-scroll{overflow-y:hidden!important;overscroll-behavior:auto!important}
+/* ContractOps v1.1 - isolated iframe reset, bright editing chrome. */
+
+/* The library omits preflight for host compatibility. This iframe owns its DOM. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{color-scheme:light!important;font-family:'Segoe UI',Arial,sans-serif;--color-accent:#2f56ff;--color-accent-hover:#2647d6;--color-accent-soft:#e9edff}
+html,body,#editor{height:100%;margin:0;overflow:hidden;background:#f4f6fb}
+.ep-root{height:100%!important;--doc-bg:#fff;--doc-bg-subtle:#f7f8fb;--doc-bg-hover:#eef1f7;--doc-bg-active:#e9edff;--doc-text:#263247;--doc-text-on-surface:#263247;--doc-border:#e3e8f1;--doc-border-light:#edf0f5;color-scheme:light!important;font-family:'Segoe UI',Arial,sans-serif}
+.ep-root [role='toolbar']{background:#fff!important;border-radius:0!important;border-bottom:1px solid #e3e8f1!important;margin:0!important;padding:10px 12px!important;min-height:52px;gap:5px}
+.ep-root [role='toolbar'] button{border-radius:5px;box-shadow:none;font-weight:400;color:#3b4354}
+.ep-root [role='toolbar'] button:hover:not(:disabled){background:#eef1f7;color:#2647d6}
+.ep-root [role='toolbar'] button[aria-pressed='true']{background:#e9edff;color:#2f56ff}
+.ep-root [role='toolbar'] button[role='combobox']{border:1px solid #e3e8f1!important;background:#fff!important;border-radius:5px!important;min-height:30px}
+.ep-root [role='toolbar'] input{border-color:#e3e8f1!important;border-radius:4px!important;background:#fff!important}
+.ep-root [data-testid='status-bar']{background:#fff!important;border-top:1px solid #e3e8f1!important;color:#667085!important;font-size:11px!important}
+.ep-root button:focus-visible{outline:2px solid #a7b6ff!important;outline-offset:2px}
+.ep-root [data-page-number]{box-shadow:0 1px 8px #15253a12!important}
+/* Arrange complete control groups into rows; every tool remains reachable. */
+.ep-root [data-testid='formatting-bar']{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;align-items:stretch!important;gap:8px 0!important;padding:8px 10px!important}
+.ep-root [data-testid='formatting-bar']>[role='group']{position:relative;flex:0 1 auto;flex-wrap:wrap;max-width:100%;min-height:52px;padding:19px 10px 4px!important;gap:3px;border-right:1px solid #e3e8f1!important;align-content:center}
+.ep-root [data-testid='formatting-bar']>[role='group']::before{content:attr(aria-label);position:absolute;top:0;left:11px;right:4px;color:#667085;font-size:10px;font-weight:500;letter-spacing:.15px;line-height:15px;white-space:nowrap}
+.ep-root [data-testid='formatting-bar']>[aria-label='Kiểu đoạn']{order:1}
+.ep-root [data-testid='formatting-bar']>[aria-label='Phông chữ']{order:2}
+.ep-root [data-testid='formatting-bar']>[aria-label='Định dạng chữ']{order:3}
+.ep-root [data-testid='formatting-bar']>[aria-label='Chỉ số']{order:4}
+.ep-root [data-testid='formatting-bar']>[aria-label='Căn lề']{order:5}
+.ep-root [data-testid='formatting-bar']>[aria-label='Danh sách']{order:6}
+.ep-root [data-testid='formatting-bar']>[aria-label='Chèn']{order:7}
+.ep-root [data-testid='formatting-bar']>[aria-label='Lịch sử']{order:8}
+.ep-root [data-testid='formatting-bar']>[aria-label='Thu phóng']{order:9;border-right:0!important}
+.contract-disclosure{position:absolute;top:9px;right:10px;z-index:10000;display:flex;align-items:center;justify-content:center;min-height:30px;padding:5px 10px;border:1px solid #e3e8f1;border-radius:5px;background:#fff;color:#475467;font:500 11px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+.contract-disclosure:hover{background:#eef1f7;color:#2f56ff}.contract-disclosure:focus-visible{outline:2px solid #a7b6ff;outline-offset:2px}
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']{min-height:48px!important;padding:7px 140px 7px 8px!important;gap:5px 0!important}
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[role='group']{min-height:32px;padding:0 8px!important;gap:3px}
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[role='group']::before{display:none}
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>:not([role='group']),
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Kiểu đoạn'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Chỉ số'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Danh sách'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Chèn'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Lịch sử'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[aria-label='Thu phóng'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar'] [aria-label='Gạch ngang'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar'] [aria-label='Small caps'],
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar'] [aria-label='All caps']{display:none!important}
+html.contract-tools-expanded .ep-root [data-testid='formatting-bar']>:not([role='group']){order:10}
+html.contract-tools-expanded .ep-root [role='menubar']{padding-right:145px!important;flex-wrap:wrap!important;overflow:visible!important}
+@media(max-width:700px){
+ .ep-root [data-testid='formatting-bar']{padding:8px 4px!important}
+ .ep-root [data-testid='formatting-bar']>[role='group']{padding-right:7px!important;padding-left:7px!important}
+ .ep-root [data-testid='formatting-bar'] button{min-width:30px!important;min-height:30px!important;height:30px!important}
+ html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']{padding:7px 4px!important;padding-top:44px!important}
+ html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']>[role='group']{padding:0 4px!important}
+ html.contract-tools-expanded .ep-root [data-testid='formatting-bar']>[aria-label='Định dạng chữ']{flex-basis:100%;border-right:0!important}
+ .contract-disclosure{top:7px;right:9px}
+}
+/* The disclosure lives in the host header, outside the editor stacking context. */
+.contract-disclosure{display:none!important}
+html.contract-external-review [data-testid='suggesting-mode-banner'],html.contract-external-review [data-testid='tracked-changes-action-bar'],html.contract-external-review .docx-unified-sidebar,html.contract-external-review [aria-label*='ình luận']{display:none!important}
+html:not(.contract-tools-expanded) .ep-root [data-testid='title-bar']{display:none!important}
+html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']{padding:7px 8px!important}
+@media(max-width:700px){html:not(.contract-tools-expanded) .ep-root [data-testid='formatting-bar']{padding:7px 4px!important}}
