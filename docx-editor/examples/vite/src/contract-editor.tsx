@@ -3,6 +3,7 @@ import React,{useEffect,useRef,useState,useMemo} from 'react';
 import {createRoot} from 'react-dom/client';
 import {DocxEditor,type DocxEditorRef} from '../../../packages/react/src/components/DocxEditor';
 import {parseDocx} from '../../../packages/core/src/docx/parser';
+import {acceptAllChanges} from '../../../packages/core/src/prosemirror/commands';
 import {useCollab,makeFootnoteSync,makePropsSync} from '../../../packages/react/src/collab/useCollab';
 import {commentsFromMap,observeComments,writeCommentsToMap} from '../../../packages/react/src/collab/commentSync';
 import {createContractTemplate} from './contract-template';
@@ -49,7 +50,7 @@ function App(){
  try{
  if(m.type==='tools'){setToolsExpanded(!!m.expanded);send('result',{id:m.id});return;}
  if(m.type==='disconnect'){revisionKey.current='';setSession(null);send('revisions',{items:[]});send('collab',{status:'disconnected',peers:[]});return;}
- if(m.type==='review'){const editor=ref.current;if(!editor)throw new Error('Trình soạn thảo chưa sẵn sàng');if(m.action==='accept')editor.acceptTrackedChange(m.from,m.to);else if(m.action==='reject')editor.rejectTrackedChange(m.from,m.to);else editor.focusTrackedChange(m.from,m.to);send('result',{id:m.id});return;}
+ if(m.type==='review'){const editor=ref.current;if(!editor)throw new Error('Trình soạn thảo chưa sẵn sàng');if(m.action==='accept-all'){const view=editor.getEditorRef()?.getView();if(!view)throw new Error('Trình soạn thảo chưa sẵn sàng');acceptAllChanges()(view.state,view.dispatch);}else if(m.action==='accept')editor.acceptTrackedChange(m.from,m.to);else if(m.action==='reject')editor.rejectTrackedChange(m.from,m.to);else editor.focusTrackedChange(m.from,m.to);send('result',{id:m.id});return;}
  if(m.type==='configure'){setSession(s=>s?{...s,mode:m.mode,author:m.author,directAllowed:!!m.directAllowed}:s);return;}
  if(m.type==='load'){const key=++generation.current;const base=m.bytes?await parseDocx(new Uint8Array(m.bytes)):createContractTemplate(m.template||'dichvu');if(key!==generation.current)return;setSession({...m,base,key});return;}
  if(m.type==='export'){const bytes=await ref.current?.save({selective:false});if(!bytes)throw new Error('Không thể xuất DOCX');send('result',{id:m.id,bytes});}

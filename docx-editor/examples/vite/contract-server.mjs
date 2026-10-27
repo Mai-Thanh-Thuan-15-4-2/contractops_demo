@@ -49,6 +49,15 @@ export function contractServerPlugin(){
   const upgrade=(req,socket,head)=>{if(new URL(req.url,'http://localhost').pathname!=='/contract-collab')return;sockets.handleUpgrade(req,socket,head,ws=>sockets.emit('connection',ws,req));};
   vite.httpServer.on('upgrade',upgrade);
   const sweep=setInterval(()=>{let changed=false;for(const[token,s]of sessions){if(s.expires<Date.now()){s.stream?.end();sessions.delete(token);changed=true;}}if(changed)announce();for(const s of sessions.values()){if(s.stream&&!s.stream.destroyed&&!s.stream.writableEnded)s.stream.write(': keepalive\n\n');}},10000);sweep.unref();
+  const pages={'/':'/contract-demo.html','/contract-editor':'/contract-editor.html'};
+  vite.middlewares.use((req,res,next)=>{
+   const url=new URL(req.url,'http://localhost');
+   if(url.pathname==='/contract-demo.html'){res.writeHead(302,{Location:'/'+url.search});res.end();return;}
+   if(url.pathname==='/contract-editor.html'){res.writeHead(302,{Location:'/contract-editor'+url.search});res.end();return;}
+   const page=pages[url.pathname];
+   if(page)req.url=page+url.search;
+   next();
+  });
   const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
   const body=async req=>{let size=0,chunks=[];for await(const c of req){size+=c.length;if(size>30*1024*1024){const e=new Error('Dữ liệu quá lớn');e.status=413;throw e;}chunks.push(c);}return chunks.length?JSON.parse(Buffer.concat(chunks).toString('utf8')):{};};
   const fail=(message,status=400)=>Object.assign(new Error(message),{status});
@@ -119,8 +128,12 @@ export function contractServerPlugin(){
       if(!reset){
        if(nextState.versions.length<prev.versions.length||nextState.versions.length>prev.versions.length+1)throw fail('Chuỗi phiên bản không hợp lệ');
        for(let i=0;i<prev.versions.length;i++){if(!same(prev.versions[i].bytes,nextState.versions[i]?.bytes)||prev.versions[i].id!==nextState.versions[i]?.id)throw fail('Không được sửa nội dung phiên bản đã gửi duyệt',403);}
-       const submitted=nextState.versions.length===prev.versions.length+1;
-       if(submitted&&(!p.submit||!p.edit||!['draft','revision'].includes(prev.status)||nextState.status!=='review'))throw fail('Bạn không có quyền gửi duyệt',403);
+       const added=nextState.versions.length===prev.versions.length+1;
+       const submitted=added&&nextState.status==='review'&&['draft','revision'].includes(prev.status);
+       const checkpoint=added&&nextState.status===prev.status&&['draft','revision'].includes(prev.status);
+       if(added&&!submitted&&!checkpoint)throw fail('Chuỗi phiên bản không hợp lệ');
+       if(submitted&&(!p.submit||!p.edit))throw fail('Bạn không có quyền gửi duyệt',403);
+       if(checkpoint&&!p.edit)throw fail('Bạn không có quyền lưu bản xác nhận',403);
        if(nextState.status!==prev.status&&!submitted){
         const reopened=prev.status==='accepted'&&nextState.status==='revision'&&session.user.id===(prev.creatorId||'ga');
         if(!reopened&&(prev.status!=='review'||!['revision','accepted'].includes(nextState.status)||!p.review))throw fail('Bạn không có quyền quyết định duyệt',403);
